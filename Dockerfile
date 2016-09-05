@@ -6,7 +6,7 @@ ENV AGENT_DIR  /opt/buildAgent
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     lxc iptables aufs-tools ca-certificates curl wget software-properties-common language-pack-en \
-    fontconfig libffi-dev build-essential git python-dev libssl-dev python-pip
+  && rm -rf /var/lib/apt/lists/*
 
 # Fix locale.
 ENV LANG en_US.UTF-8
@@ -37,12 +37,34 @@ RUN echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-s
     && ln -s /etc/ssl/certs/java/cacerts /usr/lib/jvm/java-8-oracle/jre/lib/security/cacerts \
     && update-ca-certificates
 
-# Install Docker from Docker Inc. repositories.
-RUN curl -sSL https://get.docker.com/ | sh
+# Install docker
 
-RUN adduser --disabled-password --gecos "" teamcity \
+ENV DOCKER_BUCKET get.docker.com
+ENV DOCKER_VERSION 1.11.1
+ENV DOCKER_SHA256 893e3c6e89c0cd2c5f1e51ea41bc2dd97f5e791fcfa3cee28445df277836339d
+RUN set -x \
+  && curl -fSL "https://${DOCKER_BUCKET}/builds/Linux/x86_64/docker-$DOCKER_VERSION.tgz" -o docker.tgz \
+  && echo "${DOCKER_SHA256} *docker.tgz" | sha256sum -c - \
+  && tar -xzvf docker.tgz \
+  && mv docker/* /usr/local/bin/ \
+  && rmdir docker \
+  && rm docker.tgz \
+  && docker -v
+
+RUN groupadd docker && adduser --disabled-password --gecos "" teamcity \
   && sed -i -e "s/%sudo.*$/%sudo ALL=(ALL:ALL) NOPASSWD:ALL/" /etc/sudoers \
   && usermod -a -G docker,sudo teamcity
+
+# Install jq (from github, repo contains ancient version)
+RUN curl -o /usr/local/bin/jq -SL https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 \
+  && chmod +x /usr/local/bin/jq
+
+# Install ruby build repositories
+RUN apt-add-repository ppa:ansible/ansible \
+    && apt-get update \
+    && apt-get upgrade -y \
+  unzip iptables lxc fontconfig libffi-dev build-essential git python-dev libssl-dev python-pip ansible \
+  && rm -rf /var/lib/apt/lists/*
 
 # Install httpie (with SNI), awscli, docker-compose
 RUN pip install --upgrade pyopenssl pyasn1 ndg-httpsclient httpie awscli docker-compose==$DOCKER_COMPOSE_VERSION
