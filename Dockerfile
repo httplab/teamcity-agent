@@ -67,7 +67,8 @@ RUN apt-add-repository ppa:ansible/ansible \
   && rm -rf /var/lib/apt/lists/*
 
 # Install httpie (with SNI), awscli, docker-compose
-RUN pip install --upgrade pyopenssl pyasn1 ndg-httpsclient httpie awscli docker-compose==$DOCKER_COMPOSE_VERSION
+RUN pip install --upgrade pyopenssl pyasn1 ndg-httpsclient httpie awscli
+RUN pip install docker-compose==$DOCKER_COMPOSE_VERSION
 
 # Install the magic wrapper.
 ADD wrapdocker /usr/local/bin/wrapdocker
